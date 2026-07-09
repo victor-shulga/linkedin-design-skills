@@ -41,7 +41,12 @@ Restart Claude Code. Then just paste text and say `/infographic` or `/linkedin-c
 
 ## Rebrand in 5 minutes
 
-Out of the box these produce **placeholder-branded** output. Swap these before you post:
+Out of the box these produce **placeholder-branded** output. Swap these before you post.
+
+> **No brand kit yet?** Your colours and fonts already live on your website — you just haven't written them down. Generate a full design system from your URL with
+> **[design-system-generator](https://github.com/victor-shulga/design-system-generator)** — it extracts colours, fonts, spacing and even outputs LinkedIn artifacts (banner, post footer, carousel cover) in your brand. Take the hex + font pairing from there into the steps below.
+
+Swap these before you post:
 
 ### 1. Assets — replace the PNGs in each skill's `assets/`
 | File | What | Size |
