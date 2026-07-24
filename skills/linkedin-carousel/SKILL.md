@@ -49,7 +49,9 @@ Style strings MUST be `Extra Bold` / `Semi Bold` / `Regular` with the space — 
 
 **Image asset hashes** (content-addressed, globally unique — same bytes → same hash everywhere):
 - Avatar (Viktor portrait on coral disc, full-quality): `ea444ff18bbcd12290653fdf4d261e16949fc0d9` (1080×1080)
-- Wordmark (FULL "VICTOR SHULGA" logo with globe + text — single image, not composed): `4f06f797dbd0f826e9b5b219605dcf3af93b2a6a` (200×100, 2:1 ratio)
+- Wordmark image (200×100, 2:1 ratio): `4f06f797dbd0f826e9b5b219605dcf3af93b2a6a`.
+  ⚠️ TODO: this hash still points at the retired wordmark — swap it for the current
+  stacked two-line wordmark before the next carousel build.
 - Cover photo (Viktor portrait, cropped): `387843364547d8b44de1fa68304c2b3f826899bf` (590×1010)
 
 **Source PNG files** (use these to upload into new files):
@@ -210,7 +212,7 @@ For each slide in the plan, run a `use_figma` call. Each slide is a separate Fra
 **Atom builders** (reuse across slides — keep these as inline helper functions in your scripts):
 
 ```js
-// Wordmark — single image, full "VICTOR SHULGA" logo
+// Wordmark — single image (see the TODO above: hash needs swapping)
 // Source 200×100 (2:1 ratio). Scale param controls width; height auto-derives.
 function makeWordmark(parent, x, y, scale = 1) {
   const w = 180 * scale;
