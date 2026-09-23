@@ -2,7 +2,7 @@
 
 Two Claude Code skills that turn raw text into on-brand LinkedIn creatives **directly in Figma** via the Figma MCP:
 
-- **`/infographic`** — single-image infographic 1080×1350 (comparison tables, step grids, donut/funnel/growth-curve/timeline charts)
+- **`/infographic`** — single-image infographic 1080×1350. Picks from **24 catalogued shapes** (`skills/infographic/references/infographic-templates.md`): comparison tables, step grids, donut/funnel/growth-curve/timeline charts, block grids, vertical steps, ladders, tier lists, spine-and-satellite teaching layouts, hub-and-flow architectures, concentric onions, named Venns. The catalogue also carries an anti-monotony log that forbids repeating the previous creative's shape.
 - **`/linkedin-carousel`** — full carousel 1080×1350 (cover → content → stat → CTA slides)
 
 They ship with a **placeholder brand** (coral disc avatar, "YOUR LOGO"). Fork, rebrand in ~5 min, done.
@@ -62,7 +62,7 @@ Both skills use `team::YOUR_PLAN_KEY`. Get yours by running the `whoami` tool (i
 The builders reference content-addressed image hashes. After replacing a PNG, update its hash (sha1 of the file):
 | Skill · line | Constant |
 |---|---|
-| `infographic` · L113 | `IMG.avatar` |
+| `infographic` · L326 | `IMG.avatar` |
 | `linkedin-carousel` · L241 | avatar `imageHash` |
 | `linkedin-carousel` · L223 | wordmark `imageHash` |
 | `linkedin-carousel` · L363 | cover `imageHash` |
@@ -81,12 +81,25 @@ text:   { r: 30/255,  g: 30/255,  b: 30/255 }   // your ink
 ### 5. Author strings
 | Where | Change |
 |---|---|
-| `infographic` · L168 / `carousel` · L252 | `"Victor Shulga"` → your name |
-| `infographic` · L174 | `"FRACTIONAL CRO"` → your role |
+| `infographic` · L333 / `carousel` · L254 | `"Victor Shulga"` → your name |
+| `infographic` · L339 | `"FRACTIONAL CRO"` → your role |
 | `carousel` · L259 | `"Fractional CRO"` → your role |
-| `infographic` · L150 | `"victorshulga.com"` → your domain |
+| `infographic` · L315 | `"victorshulga.com"` → your domain |
+
+Line numbers drift whenever the skill grows. Confirm with
+`grep -n 'IMG.avatar\|"Victor Shulga"\|FRACTIONAL CRO\|victorshulga.com' skills/infographic/SKILL.md`.
 
 That's it — everything else (layout engine, chart atoms, brand-rule enforcement) stays.
+
+---
+
+## Two render backends
+
+The infographic skill renders either in Figma (editable afterwards) or through a `build.py`
+that screenshots HTML with headless Chrome. Reference scripts live in
+`skills/infographic/assets/html-render/`. Use the HTML path for polar layouts, opacity ramps
+and anything driven by a data list; both Chrome flags in those scripts are mandatory, or
+Cyrillic silently falls back to a serif.
 
 ---
 

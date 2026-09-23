@@ -1,11 +1,11 @@
 ---
 name: infographic
-description: Generates LinkedIn infographics (1080×1350) for Victor Shulga's personal brand in Figma from raw text. Use whenever Viktor pastes text and asks for an infographic — "інфографіка", "зроби інфографіку", "comparison table з цього", "step grid", "9 кроків як інфографіка", "donut/пончик", "лійка/funnel", "крива росту", "таймлайн", "make an infographic from this", or describes structured content that's NOT a carousel sequence. Routes between text templates (Comparison Table N×3, Step Grid 3×3) AND data-viz chart templates (Donut/Pie, Funnel, Growth Curve, Timeline), or falls back to custom-build for other shapes (Branching Tree, ICP/Quadrant Analysis).
+description: Generates LinkedIn infographics (1080×1350) for the Victor Shulga personal brand (victorshulga.com) from raw text. Use whenever Viktor pastes text and asks for an infographic — "інфографіка", "зроби інфографіку", "comparison table", "step grid", "пончик", "лійка", "крива росту", "таймлайн", "драбина", "тір-ліст", "інструкція в 4 кроки", "how-to", "make an infographic from this" — or describes structured content that is NOT a carousel. Picks one of 24 catalogued shapes: read references/infographic-templates.md FIRST for what each shape serves, how it gets ruined, build mechanics, and the anti-monotony log that forbids repeating the previous creative shape. Ten have builders here (Comparison Table, Step Grid, Donut, Funnel, Growth Curve, Timeline, Block Grid, Vertical Steps, Ladder, Timeline Rows); fourteen more are specified in the catalogue (Spine + Satellites, Hub & Flows, Tier List, Claim + Evidence, Diagnostic Cards, Roster Grid, Panel Grid, Centre + Orbit, Spec Rail, Rail + Artifact, Maturity Staircase, Step Spine, Onion + Sectors, Named Venn). Two backends: Figma, or a build.py that screenshots HTML with headless Chrome — trigger it on "скриптом", "HTML-креатив", "не через Figma".
 ---
 
 # /infographic
 
-Generate LinkedIn infographics for Victor Shulga's personal brand using his existing Figma design system. **Brand-pure palette**: white BG + coral + charcoal + forest only. NO pastels.
+Generate LinkedIn infographics for the Victor Shulga personal brand (victorshulga.com) using his existing Figma design system. **Brand-pure palette**: white BG + coral + charcoal + forest only. NO pastels.
 
 ## When to trigger
 
@@ -16,6 +16,12 @@ Generate LinkedIn infographics for Victor Shulga's personal brand using his exis
 - Any single-image structured visualization (NOT a multi-slide carousel — for that use `/linkedin-carousel`)
 
 ## Decision tree — which template to use
+
+**Read `references/infographic-templates.md` FIRST.** It holds all twenty-four shapes with
+the content each one serves and the way each gets ruined, plus the anti-monotony log:
+do not repeat the shape used on the last creative. The table below covers only the ten
+shapes that already have builders here; shapes 11-24 are specified in that file and
+build on the HTML/Chrome backend.
 
 Read the content. **Prefer a CHART over a text grid whenever the data has a shape** — proportions, a sequence with drop-off, change over time, or two poles on an axis. Text-in-boxes is the fallback, not the default.
 
@@ -29,6 +35,9 @@ Read the content. **Prefer a CHART over a text grid whenever the data has a shap
 | 2-3 columns comparing categories (Weak vs Strong, Before vs After, Bad vs Good) across 4-6 rows | **Comparison Table** (text) |
 | 5-12 sequential/parallel steps/tips, each title + 1-3 lines | **Step Grid 3×3** (text; or 2×3, 4×3) |
 | A whole framework / playbook / deck condensed — 6-9 blocks, EACH needing its own little diagram (funnel, ladder, checklist, flow, chips) | **Block Grid** — dense N-card grid, mini-visual per card |
+| A HOW-TO / setup / "do this then that" — 3-5 ordered steps, each deserving ONE full-width concrete visual (tool row, pill row, box row, input→output) | **Vertical Steps** — linear numbered sections, one band per step |
+| A ranked ORDER over tiers — priority queue, trust ladder, maturity levels, "start here not there" (4-7 rows, each row carries a name + state + an intensity meter) | **Ladder** — HTML/Chrome backend, see recipe below |
+| A PROCESS OVER TIME where each period has a hidden inside and a visible outside — launch plan, ramp-up, "what is built while nothing shows yet" (5-7 periods, each row = period + what happens + what the stakeholder sees, optional voice-of-stakeholder quote) | **Timeline Rows** — HTML/Chrome backend, see recipe below |
 | Branching tree (1 → N → M with arrows) | **Custom build** — not templated, ~30-45 min |
 | Multiple categorized cards + diagram + matrix (mixed canvas) | **Custom build** — not templated, ~45-60 min |
 
@@ -36,30 +45,185 @@ A single infographic may **combine** a chart band + a text band (e.g. donut on t
 
 If content is genuinely 2-3 things and short → ask Viktor if he wants it as 2-3 SLIDE CAROUSEL instead (better for LinkedIn engagement).
 
+## Render backend — Figma vs HTML/Chrome
+
+Two ways to produce the same 1080×1350 brand-pure image. **Pick one deliberately before building** and say which one you picked.
+
+| | **Figma** (default) | **HTML + headless Chrome** |
+|---|---|---|
+| How | `use_figma` builds nodes in a new file | a `build.py` writes an HTML string, Chrome screenshots it |
+| Deliverable | Figma file URL + PNG export by hand | PNG on disk, ready to upload |
+| Viktor can edit after | yes, directly on canvas | no — edits go through the script |
+| Best for | anything already templated here (charts, grids, tables, steps) | shapes CSS does in one line and Figma nodes do in twenty: staircase indents, opacity ramps across rows, `border-radius` cards, flex meters, precise letter-spacing |
+| Iteration cost | a nudge = one more tool call | a nudge = edit a constant, re-run, look at the PNG |
+| Risk | node math, font style strings, collapsing auto-layout | needs network for Google Fonts; Cyrillic falls back to serif without the right Chrome flags |
+
+**Choose HTML/Chrome when** the layout is a repeated row/card structure driven by a data list (a ladder, a ranked table, a dense matrix), when you need CSS-native effects (opacity ramps, staircase offsets, pill tags inline in a flex row), or when Viktor wants the image regenerated repeatedly with different numbers. **Otherwise stay on Figma** — he can edit it afterwards, which is worth a lot.
+
+### HTML/Chrome mechanics
+
+Working reference (runs as-is, produces the "Новий офер тестують не на холодних" ladder):
+`~/.claude/skills/infographic/assets/html-render/ladder-reference.py`
+
+Copy it into the post's output folder, swap the data list + title + rule band, run it. The skeleton:
+
+```python
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+subprocess.run([
+    CHROME, "--headless", "--disable-gpu", "--hide-scrollbars",
+    "--force-device-scale-factor=2",          # 2160×2700 output, retina-sharp
+    "--window-size=1080,1350",
+    "--virtual-time-budget=6000",             # MANDATORY — else Cyrillic renders as serif
+    "--run-all-compositor-stages-before-draw",# MANDATORY — else webfonts miss the frame
+    f"--screenshot={png}", str(html_path),
+], check=True, capture_output=True)
+```
+
+Non-negotiables for this backend:
+
+- **Both Chrome flags** (`--virtual-time-budget=6000`, `--run-all-compositor-stages-before-draw`). Without them Google Fonts don't land and Ukrainian text drops to a serif fallback. Always open the PNG and confirm the Cyrillic before shipping.
+- **Photo goes in as base64**, never a file path — `file://` images are flaky in headless. Source: `~/.claude/skills/infographic/assets/avatar.png`.
+- **Bowtie mark is inline SVG** (see `BOWTIE` in the reference), not an image asset.
+- **Brand tokens are declared once at the top** of the script as Python constants, copied from `victorshulga-design-system/index.html`. Never hardcode hexes inline in the CSS string.
+- `html,body{{width:1080px;height:1350px;overflow:hidden}}` — fix the canvas, don't let content grow it. If a row list overflows, shrink the row height, don't let Chrome scroll.
+- Same brand rules as Figma: white BG, rubric chip on top, ALL-CAPS centered title, white text on coral highlight, footer with photo + FRACTIONAL CRO pill left / bowtie + victorshulga.com right.
+
+## Recipe: LADDER (ranked tiers, HTML/Chrome)
+
+A vertical staircase of 4-7 rows. Row 1 sits at the top, full coral; each next row indents right and fades. Reads as "start at the top, not at the bottom".
+
+Data shape — one tuple per row:
+
+```python
+# (queue number, name, state line, filled meter dots, background opacity, white text?)
+ROWS = [
+    ("1", "Амбасадор", "рекомендує вас іншим",       6, 1.00, True),
+    ("2", "Клієнт",    "платить прямо зараз",        5, 0.82, True),
+    ("3", "SQL",       "бачив пропозал, не купив",   4, 0.62, True),
+    ("4", "MQL",       "був дзвінок, далі тиша",     3, 0.42, False),
+    ("5", "Лід",       "є діалог, ще нічого не було",2, 0.24, False),
+    ("6", "Проспект",  "холодний, про вас не чув",   1, 0.11, False),
+]
+```
+
+Mechanics:
+
+- **Staircase** = `margin-left: i * 30px` on row `i`. Keep 30px; more and the last row loses its meter column.
+- **Fade** = `background: rgba(232,90,79,{opacity})` — the coral token in rgba form. Flip text to white for the top ~3 rows (opacity ≥ .6), ink below, so contrast holds both ways.
+- **Meter** = 6 dots, `filled` at full opacity and the rest at `.22`, colored with the row's own text color. It gives a second read of the same ranking without a second axis.
+- **Column headers** above the ladder (`Черга тесту` / `Траст`) in JetBrains Mono, uppercase, muted — they name the two axes in 4 words.
+- **One black tag** (`сюди всі ллють тести`) pinned on the row that carries the tension. Exactly one, or the joke dies.
+- **Rule band** at the bottom: ink card, coral `ПРАВИЛО` pill, one white sentence + one muted sentence. This is where the payoff line lives.
+- Vertical coral arrow on the left, arrowhead UP, shaft at `.28` opacity — it says which direction the ladder is read.
+
+Pitfalls specific to Ladder:
+
+- Rows are `height:112px` with `gap:15px` for 6 rows. For 7 rows drop to 96px; for 4-5 rows go up to 130px rather than leaving dead space.
+- The state line is the payload, not decoration — write it as an observable fact ("бачив пропозал, не купив"), never a category label.
+- Don't put the coral highlight pill in the title AND keep row 1 full coral without checking the render — two solid coral masses stacked read as a bug.
+
+## Recipe: TIMELINE ROWS (a process over time, HTML/Chrome)
+
+Built 2026-08-31 for «Таймлайн запуску аутбаунду». Reference script:
+`~/.claude/skills/infographic/assets/html-render/timeline-rows-reference.py` — runs as-is, produces that creative.
+
+**Pick this over Ladder when** the rows are PERIODS, not ranks: the coral ramp reads as time passing and
+results arriving, not as trust. Pick it over Vertical Steps when every period needs the SAME three columns
+rather than its own bespoke band. The format exists to hold one specific tension: **what is being built
+vs what the stakeholder actually sees**. If there is no such gap, this template is the wrong shape.
+
+### Anatomy (top to bottom)
+
+1. **Rubric chip** — centred, per the locked 7-pillar mapping. A launch/channel creative is
+   «Мультиканальний аутріч» charcoal `#161513`, not GTM-strategy coral. Check the mapping, don't default.
+2. **H1 + subheading** — the usual literal artifact name, CAPS, centred, line 2 in the coral pill.
+3. **Source-card band** (`STREAMS`) — 3-5 cards, each `name` + coral caption + wrapped chip pills + a
+   muted volume line pinned to the card bottom (`margin-top:auto`). This is the "where does the input
+   come from" layer. Above it a mono eyebrow (`Звідки беремо ліди`).
+4. **Two-column header** — left names the left columns, right names the right column.
+5. **Rows** (`ROWS`) — one per period: badge (period label) · title + detail · optional stakeholder
+   quote pill · right-hand "what they see" column. Background = `rgba(coral, op)` with `op` rising
+   0.10 → 1.00 down the list; flip text to white from ~0.6 down.
+6. **Rule band** — ink card, coral pill label, one factual sentence, one number chip pushed right
+   with `margin-left:auto`.
+7. Standard footer.
+
+### Data shape
+
+```python
+# (name, caption, [source chips], volume line)
+STREAMS = [("Сигнал", "коли писати", ["вакансії", "рух штату"], "3–5% бази в моменті"), ...]
+
+# (period, what is built, detail, stakeholder quote or "", what they see, bg opacity, white text?)
+ROWS = [("3–4", "База під сигнал і дозбір даних", "збираємо тих, у кого сигнал зараз",
+         "де ліди?", "список компаній", 0.24, False), ...]
+```
+
+### Rules that this template is actually about
+
+- **The right column holds ANSWERS, not labels.** «слайди й таблиці», «список компаній»,
+  «зустрічі в календарі» — things a person could point at. One-word abstractions
+  («порожньо», «потік») fail the column's own question and Viktor rejects them on sight.
+- **Quote pills are white with ink text on every row**, coral `CEO`-style tag inside; exactly ONE row
+  gets the ink/white inverted pill and that row carries the creative's tension. Outlined or
+  translucent quote pills over a coral ramp are unreadable — this was the first thing rejected.
+- **Leave one row without a quote.** Six pills in a column reads as a form, not as a voice.
+- **The rule band states a fact from the table above it**, not a summary of the idea. «Зустрічі
+  зʼявляються на тижні 7» passes; «Перші шість тижнів оплачують шар даних» is an image and was
+  rejected as AI-speak.
+
+### Height budgeting (the loop you will run 3-4 times)
+
+Rows are the shock absorber. Everything else is fixed, so: render → measure the white gap between the
+last row and the rule band → add `gap / 6` to `.row height` → re-render. A 5-card source band with
+wrapping pills is ~135px; a 4-card band is ~115px and rows grow to ~104px to compensate. Chip pills at
+`font-size:11.5px` fit roughly 2 per 159px card column and 2-3 per 234px column — dropping a card
+changes the wrap and therefore the whole budget.
+
+Card width also decides the source format: at 4 cards (~234px) pills work; at 5 cards (~185px) they
+wrap one-per-line and a plain `·`-separated text line reads better.
+
+### Run the copy through the detector before shipping
+
+Creative copy is post copy. Dump every string into a `.md` and run
+`anticopywriting-ai/scripts/detect.py --lang uk --mode post`. Real hits found this way: em dashes in
+the rule band (`сигнал — коли писати` → `сигнал: коли писати`), and the word «тиша» for absent replies
+(ban #12). Two hits are ARTIFACTS of flattening a table into prose — `rule_of_three` fires when list
+rows land as consecutive short fragments (prefix them with `→` in the dump), and `throat_clear` always
+fires on the H1 because the brand rule requires a literal artifact name there. Neither is a real defect.
+
 ## Brand reference (memorize)
 
 **Foundations file**: `https://www.figma.com/design/ngweiN07cnXQo8zjRMfbZI`
-**Plan key (Viktor)**: `team::YOUR_PLAN_KEY`
+**Plan key (Viktor)**: `<your Figma plan key>`
 **Format**: 1080×1350 (4:5 portrait)
 
 **Palette** (always 0-1 range):
 - BG `{r:1, g:1, b:1}` white
-- Text `{r:30/255, g:30/255, b:30/255}` charcoal
-- Coral `{r:232/255, g:90/255, b:79/255}` for highlights / accent markers
-- Forest `{r:46/255, g:125/255, b:91/255}` for positive callouts ONLY
+- Text `{r:22/255, g:21/255, b:19/255}` ink `#161513`
+- Coral `{r:232/255, g:90/255, b:79/255}` `#E85A4F` for highlights / accent markers
+- Forest `{r:45/255, g:90/255, b:74/255}` `#2D5A4A` for positive callouts ONLY
 - Border `{r:0.92, g:0.92, b:0.92}` light grey for card/row dividers
 
 **Typography**: Inter — `Extra Bold`, `Semi Bold`, `Regular` (with space in style names).
 
 **TITLE RULES (brand-wide, every post — infographic AND carousel):**
 - Main title is **ALL CAPS** and **CENTERED** (not left-aligned).
+- **TITLE TEST — run this BEFORE building anything.** The H1 answers **«ЩО ЦЕ ЗА ДОКУМЕНТ?»** (what IS this artifact), never «what is the main point». Formula: **`<artifact type> + <subject>`** — «Калькулятор потужності аутріча», «Карта GTM-системи», «9 місяців студії Gavan Fitness», «24 скіли для Claude Code». Three auto-reject checks — if ANY fires, the title is a hook, rewrite it:
+  1. the H1 would work as the post's opening line (a scroll-stopper) → hook
+  2. the H1 carries a result or a promise-number («10 зустрічей на місяць», «$3 093», «83% бюджету») → hook
+  3. the H1 asks a question or promises an answer («що для цього треба», «як це працює») → hook
+  The example figure and the thesis go in the SUBHEADING under the H1 («Приклад: 10 зустрічей на місяць»). A number stays in the H1 only when the number IS the subject («9 місяців», «24 скіли»).
+  Rejected 2026-08-12 in one session: «БЮДЖЕТ АУТБАУНДУ НА МІСЯЦЬ $3 093», «10 ЗУСТРІЧЕЙ НА МІСЯЦЬ / ЩО ДЛЯ ЦЬОГО ТРЕБА». Approved: «КАЛЬКУЛЯТОР ПОТУЖНОСТІ / АУТРІЧА».
+- **The H1 names the creative's subject LITERALLY — it is not the punch, the insight, or the post's thesis.** Viktor rejects metaphorical and clever headlines on sight ("знову назва відстій"). Write what the image IS: «Аутріч на сигналах», «9 місяців студії Gavan Fitness», «10 джерел для аутріча». The insight lives in the rubric chip, the subheading, or the post body — never in the H1. Corollary: a number in the H1 must appear somewhere in the image; don't headline a figure the reader can't find. Default shape for recurring/report creatives: `<what it is> + <period/number>`. (Rule 8a in `feedback_writing_bans`.)
+- **Headline SHAPE is fixed (canon: design system §16 cover + the «Новий офер тестують / НЕ НА ХОЛОДНИХ» creative):** two lines — line 1 plain ink, line 2 SHORTER and wrapped in the coral pill with white text. Never the whole headline in one coral slab; never a coral-colored word instead of the pill; never a pill on the longer line. If the title is one line, it stays plain ink and the pill is skipped.
 - Any **coral-highlight pill** has **WHITE text** (never charcoal). `makeHL` already does this.
 - Section sub-labels are centered too. (See [[feedback_infographic_caps_title]].)
 
 **Image asset hash** (must be uploaded to new file first):
 - Avatar (Viktor's photo on coral disc, 1080×1080): `ea444ff18bbcd12290653fdf4d261e16949fc0d9`
 
-The brand mark in the footer is now a **bowtie on a coral square drawn as vectors** (`makeBowtieSquare`) — NO wordmark image needed. Footer = `makeAuthor` (photo + name + FRACTIONAL CRO pill) left, `makeWordmark` (bowtie mark + victorshulga.com) right. This replaced the old VICTOR SHULGA globe wordmark + "Fractional CRO" line.
+The brand mark in the footer is now a **bowtie on a coral square drawn as vectors** (`makeBowtieSquare`) — NO wordmark image needed. Footer = `makeAuthor` (photo + name + FRACTIONAL CRO pill) left, `makeWordmark` (bowtie mark + victorshulga.com) right. This replaced the old dead-brand globe wordmark + founder line.
 
 **Source PNG**:
 - `~/.claude/skills/infographic/assets/avatar.png`
@@ -68,14 +232,14 @@ The brand mark in the footer is now a **bowtie on a coral square drawn as vector
 
 ### Step 1 — Classify + plan structure
 
-Pick template based on content shape (decision tree above). For Comparison Table: identify the comparison axis (2 columns vs 3), category rows, and bullets per cell. For Step Grid: identify step count (best is 9 = 3×3, but also 6 = 2×3 or 12 = 3×4).
+Pick template based on content shape (decision tree above), then pick the **render backend** (Figma vs HTML/Chrome — see the table above) and state which one you're using. Steps 2-4 below are the Figma path; for the HTML path copy `assets/html-render/ladder-reference.py` into the post folder, edit the data list, run it, and inspect the PNG. For Comparison Table: identify the comparison axis (2 columns vs 3), category rows, and bullets per cell. For Step Grid: identify step count (best is 9 = 3×3, but also 6 = 2×3 or 12 = 3×4).
 
 For Custom builds: outline the structure to Viktor as bullet points, get confirmation before starting, then build inline using same atom builders.
 
 ### Step 2 — Create new Figma file
 
 ```
-whoami → planKey "team::YOUR_PLAN_KEY"
+whoami → planKey "<your Figma plan key>"
 create_new_file → editorType="design", fileName="[topic] — Infographic"
 ```
 
@@ -103,9 +267,10 @@ Clear placeholder frames, load fonts, build the chosen template. Use the recipes
 ```js
 const C = {
   bg:     { r: 1,       g: 1,       b: 1       },
-  text:   { r: 30/255,  g: 30/255,  b: 30/255  },
-  coral:  { r: 232/255, g: 90/255,  b: 79/255  },
-  forest: { r: 46/255,  g: 125/255, b: 91/255  },
+  text:   { r: 22/255,  g: 21/255,  b: 19/255  },   // ink #161513
+  coral:  { r: 232/255, g: 90/255,  b: 79/255  },   // #E85A4F
+  forest: { r: 45/255,  g: 90/255,  b: 74/255  },   // #2D5A4A
+
   border: { r: 0.92,    g: 0.92,    b: 0.92    },
 };
 const PAINT = (c) => ({ type: "SOLID", color: c });
@@ -116,7 +281,7 @@ const IMG = {
 // Bowtie brand mark — APPROVED victorshulga.com symbol: coral rounded square,
 // two ROUNDED white wings (stroke-linejoin round) + charcoal center node.
 // Geometry 1:1 with victor-logo/assets/favicon.svg (viewBox 100). Vector-drawn, no image.
-// NODE = { r:28/255, g:28/255, b:30/255 } (#1C1C1E). Replaces the old wordmark globe.
+// NODE = { r:28/255, g:28/255, b:30/255 } (#1C1C1E, matches favicon geometry).
 function makeBowtieSquare(size = 52) {
   const k = size / 100;
   const NODE = { r: 28/255, g: 28/255, b: 30/255 };
@@ -350,9 +515,9 @@ function makeTimeline(parent, x0, x1, axisY, zones, ticks) {
 }
 ```
 
-## Chart atom builders — v2 (Pierre-style diagram elements)
+## Chart atom builders — v2 (diagram elements)
 
-Brand-recolored versions of Pierre Herubel's visual vocabulary (approved 2026-06-19) — use these to put a real graphic in EVERY block, not just text. All brand-pure (coral + tints + forest + charcoal); no pastels. `GREY` = the neutral dot/track shade.
+Brand-recolored diagram atoms — use these to put a real graphic in EVERY block, not just text. All brand-pure (coral + tints + forest + charcoal); no pastels. `GREY` = the neutral dot/track shade.
 
 ```js
 const GREY = { r: 0.85, g: 0.82, b: 0.79 };
@@ -445,9 +610,9 @@ function makeBarChart(parent, x0, baseY, bars, barW = 44, gap = 14) {
 
 **Which element per intent:** proportion → Donut; share of a population → DotGrid; narrowing stages → Funnel; change over time → Curve; magnitude/ranking → BarChart; "focus to the niche" / complexity layers → Concentric; positioning / two axes → Quadrant; one hub → many attributes (ICP, committee) → HubSpokes; a single metric/score → ScoreRing; two opposed states on an axis → Timeline.
 
-## Icon library + icon-tiles (Pierre "icon-tile" element)
+## Icon library + icon-tiles
 
-31 brand line icons live as SVG files in `assets/icons/` (24-grid, stroke 2, round caps, charcoal). The **icon-tile** — rounded coral-tint square + line icon + label — is the core Pierre element: use it in ROWS for "channels / ways / list" content (e.g. lead-gen channels, content formats, outbound tactics) instead of plain text pills. Preview all 31 at `assets/icons/preview.html`.
+31 brand line icons live as SVG files in `assets/icons/` (24-grid, stroke 2, round caps, charcoal). The **icon-tile** — rounded coral-tint square + line icon + label — is the core list element: use it in ROWS for "channels / ways / list" content (e.g. lead-gen channels, content formats, outbound tactics) instead of plain text pills. Preview all 31 at `assets/icons/preview.html`.
 
 **Icon-map (card theme → icon name):**
 
@@ -495,7 +660,7 @@ function makeIconRow(parent, x, y, items, opts = {}) {
 }
 ```
 
-**Rules:** one row = 3-6 tiles (wrap to a second row beyond 6). Keep tiles charcoal by default; set `accent:true` on at most one tile per row (the "punch"), per the one-accent-per-card rule. Tile label ≤ 2 words. To reproduce a Pierre-style "canvas of channels" (e.g. Demand Gen icon grid), stack 2-3 `makeIconRow` bands under a section header.
+**Rules:** one row = 3-6 tiles (wrap to a second row beyond 6). Keep tiles charcoal by default; set `accent:true` on at most one tile per row (the "punch"), per the one-accent-per-card rule. Tile label ≤ 2 words. To build a "canvas of channels" (e.g. Demand Gen icon grid), stack 2-3 `makeIconRow` bands under a section header.
 
 ## Recipe: DONUT / PIE
 
@@ -586,7 +751,7 @@ makeWordmark(frame, 1080 - 180 - 60, 1350 - 60 - 60);
 
 ## Recipe: BLOCK GRID (dense N-card with a mini-visual per card)
 
-This is the **flagship dense format** — the one that looks like the GTM/LinkedIn reference posts (Sollo, McTighe, Estner): a header + a 3-col grid of cards, where **every card carries its own little diagram**, not just text. Use it to condense a whole framework, playbook, or slide deck into one image. Built 2026-06-17 from the GTM-стратегія deck (file `qQDQowVVvNIOtGKp5XWcev`, 9 cards = 3×3).
+This is the **flagship dense format** — a header + a 3-col grid of cards, where **every card carries its own little diagram**, not just text. Use it to condense a whole framework, playbook, or slide deck into one image. Built from a 9-card 3×3 GTM deck condensation.
 
 **Density is the point.** A sparse 3-block layout reads as low-effort — Viktor rejected it. Aim for 6 (2×3) or 9 (3×3) cards, each = number badge + 1-2-line title + a compact mini-visual + optional micro-labels.
 
@@ -896,6 +1061,235 @@ makeAuthor(frame, 60, 1350 - 72 - 60);
 makeWordmark(frame, 1080 - 180 - 60, 1350 - 60 - 60);
 ```
 
+## Recipe: VERTICAL STEPS (linear how-to, 3-5 ordered sections)
+
+The **how-to counterpart to Block Grid**. Block Grid = a catalogue you scan; Vertical Steps = an instruction you read top-down. Added 2026-08-03 after a reference teardown: when the content is "do this, then this", a 3×3 grid reads as a reference card and loses the sequence.
+
+**Pick this over Block Grid when** the content is ordered, the reader is meant to DO it, and each step deserves one *concrete* visual (a row of real things) rather than an abstract diagram. Rule of thumb: if the steps can be reordered without breaking meaning → Block Grid. If they can't → Vertical Steps.
+
+**Concrete beats abstract here.** Block Grid mini-visuals are diagrams (donut, funnel, ring). Vertical Steps bands are interface-like objects: tiles, pills, boxes, chips, an input→output pair. Do NOT reuse the chart atoms in this template.
+
+### Layout constants (1080×1350)
+
+```js
+const M = 60;                       // left/right margin (wider than Block Grid — this format breathes)
+const CW = 1080 - M * 2;            // 960 content width
+// header:  chip y=40 · title y=96 (2 lines, 46px CAPS centered) · subhead y≈214
+// steps:   start y=280, section gap 38
+// per step: number+title row (h 38) → caption (h 24) → gap 14 → band
+// footer:  hairline rule + tagline row, then makeAuthor / makeWordmark
+```
+
+Budget the bands BEFORE building: `Σ(stepHeights) + gaps` must leave ≥ 175px for the footer block. Typical band heights: tileRow 104 · pillRow 58 · noteBar 52 · coralBoxRow 112 · twoColArrow 150. Four steps fit 1080×1350 comfortably; five is the ceiling. **Never exceed 1080×1350** — LinkedIn crops past 4:5.
+
+### Step header
+
+```js
+// number in coral + title in ink, on one row; caption underneath in grey
+function stepHead(f, n, title, caption, y) {
+  mt(f, n, M, y + 6, 18, "Extra Bold", C.coral);
+  mt(f, title, M + 46, y, 30, "Extra Bold", C.text);
+  if (caption) mt(f, caption, M + 46, y + 40, 18, "Regular", C.grey);
+  return y + (caption ? 74 : 46);            // returns the band's top y
+}
+```
+
+### Band library
+
+```js
+// 1. TILE ROW — N cards, each optional badge + bold label + grey sub. The "your stack" band.
+//    items = [{label, sub, badge}]  (badge = 1-2 chars or an emoji-free glyph)
+function tileRow(f, x, y, w, items, opts = {}) {
+  const h = opts.h || 104, gap = 14;
+  const tw = (w - gap * (items.length - 1)) / items.length;
+  const wrap = figma.createRectangle();
+  wrap.resize(w + 28, h + 28); wrap.x = x - 14; wrap.y = y - 14; wrap.cornerRadius = 16;
+  wrap.fills = [PAINT(C.card)]; f.appendChild(wrap);
+  items.forEach((it, i) => {
+    const tx = x + i * (tw + gap);
+    const c = figma.createRectangle();
+    c.resize(tw, h); c.x = tx; c.y = y; c.cornerRadius = 12;
+    c.fills = [PAINT(C.bg)]; c.strokes = [PAINT(C.line)]; c.strokeWeight = 1; f.appendChild(c);
+    if (it.badge) {
+      const b = figma.createRectangle();
+      b.resize(34, 34); b.x = tx + tw / 2 - 17; b.y = y + 16; b.cornerRadius = 9;
+      b.fills = [PAINT(C.text)]; f.appendChild(b);
+      mt(f, it.badge, tx + tw / 2 - 17, y + 25, 14, "Extra Bold", C.bg, "CENTER", 34);
+    }
+    mt(f, it.label, tx, y + (it.badge ? 60 : 26), 17, "Extra Bold", C.text, "CENTER", tw);
+    if (it.sub) mt(f, it.sub, tx, y + (it.badge ? 82 : 52), 15, "Regular", C.grey, "CENTER", tw);
+  });
+  return y + h;
+}
+
+// 2. PILL ROW — N outlined CAPS pills. The "what each one exposes" band.
+function pillRow(f, x, y, w, labels, opts = {}) {
+  const h = opts.h || 58, gap = 14;
+  const pw = (w - gap * (labels.length - 1)) / labels.length;
+  labels.forEach((l, i) => {
+    const px = x + i * (pw + gap);
+    const r = figma.createRectangle();
+    r.resize(pw, h); r.x = px; r.y = y; r.cornerRadius = 10;
+    r.fills = [PAINT(C.bg)]; r.strokes = [PAINT(C.text)]; r.strokeWeight = 2; f.appendChild(r);
+    const t = mt(f, l, px, y + h / 2 - 12, 21, "Extra Bold", C.text, "CENTER", pw);
+    t.letterSpacing = { unit: "PERCENT", value: 6 };
+  });
+  return y + h;
+}
+
+// 3. NOTE BAR — full-width tinted bar: bold lead + grey tail. The one-line proof under a band.
+function noteBar(f, x, y, w, lead, tail, opts = {}) {
+  const h = opts.h || 52;
+  const r = figma.createRectangle();
+  r.resize(w, h); r.x = x; r.y = y; r.cornerRadius = 10;
+  r.fills = [PAINT(opts.coral ? C.coralSoft : C.card)]; f.appendChild(r);
+  const a = mt(f, lead, x + 20, y + h / 2 - 11, 17, "Extra Bold", C.text);
+  if (tail) mt(f, tail, x + 20 + a.width + 8, y + h / 2 - 11, 17, "Regular", C.grey);
+  return y + h;
+}
+
+// 4. CORAL BOX ROW — coral-outlined container, eyebrow label, right-hand tag, N solid coral boxes
+//    with WHITE text. The "make it interview you" band. boxes = ["…", "…"]
+function coralBoxRow(f, x, y, w, eyebrow, tag, boxes, opts = {}) {
+  const bh = opts.bh || 76, pad = 18, gap = 12, h = bh + 40 + pad * 2;
+  const shell = figma.createRectangle();
+  shell.resize(w, h); shell.x = x; shell.y = y; shell.cornerRadius = 14;
+  shell.fills = [PAINT(C.bg)]; shell.strokes = [PAINT(C.coral)]; shell.strokeWeight = 2; f.appendChild(shell);
+  const e = mt(f, eyebrow, x + pad, y + pad, 14, "Semi Bold", C.coral);
+  e.letterSpacing = { unit: "PERCENT", value: 10 };
+  if (tag) {
+    const t = mt(f, tag, x, y + pad, 14, "Semi Bold", C.grey, "RIGHT", w - pad);
+    t.letterSpacing = { unit: "PERCENT", value: 10 };
+  }
+  const bw = (w - pad * 2 - gap * (boxes.length - 1)) / boxes.length;
+  boxes.forEach((b, i) => {
+    const bx = x + pad + i * (bw + gap);
+    const r = figma.createRectangle();
+    r.resize(bw, bh); r.x = bx; r.y = y + pad + 40; r.cornerRadius = 10;
+    r.fills = [PAINT(C.coral)]; f.appendChild(r);
+    const t = figma.createText();
+    t.fontName = { family: "Inter", style: "Extra Bold" };
+    t.characters = b; t.fontSize = 17; t.fills = [PAINT(C.bg)];      // WHITE on coral (brand rule)
+    t.lineHeight = { unit: "PERCENT", value: 122 }; t.textAutoResize = "HEIGHT";
+    f.appendChild(t); t.resize(bw - 28, t.height);
+    t.x = bx + 14; t.y = y + pad + 40 + (bh - t.height) / 2;
+  });
+  return y + h;
+}
+
+// 5. TWO-COL ARROW — left panel (coral-arrow list) → arrow → right panel (wrapped chips).
+//    The "you describe / it builds" band. Widest band; budget 150px.
+function twoColArrow(f, x, y, w, leftTitle, leftItems, rightTitle, chips, opts = {}) {
+  const h = opts.h || 150, arrowW = 56;
+  const lw = Math.round((w - arrowW) * 0.46), rw = w - arrowW - lw;
+  const lp = figma.createRectangle();
+  lp.resize(lw, h); lp.x = x; lp.y = y; lp.cornerRadius = 12; lp.fills = [PAINT(C.card)]; f.appendChild(lp);
+  const lt = mt(f, leftTitle, x + 18, y + 16, 13, "Semi Bold", C.grey);
+  lt.letterSpacing = { unit: "PERCENT", value: 10 };
+  leftItems.forEach((it, i) => {
+    mt(f, "→", x + 18, y + 44 + i * 24, 15, "Semi Bold", C.coral);
+    mt(f, it, x + 44, y + 44 + i * 24, 16, "Semi Bold", C.text);
+  });
+  mt(f, "→", x + lw + 14, y + h / 2 - 16, 30, "Semi Bold", C.grey);
+  const rp = figma.createRectangle();
+  rp.resize(rw, h); rp.x = x + lw + arrowW; rp.y = y; rp.cornerRadius = 12;
+  rp.fills = [PAINT(C.bg)]; rp.strokes = [PAINT(C.text)]; rp.strokeWeight = 2; f.appendChild(rp);
+  const rt = mt(f, rightTitle, x + lw + arrowW + 18, y + 16, 13, "Semi Bold", C.text);
+  rt.letterSpacing = { unit: "PERCENT", value: 10 };
+  chipWrap(f, x + lw + arrowW + 18, y + 44, rw - 36, chips);
+  return y + h;
+}
+
+// 6. CHIP WRAP — mono-ish chips that wrap onto rows. Use for file names, tags, fields.
+function chipWrap(f, x, y, w, chips, opts = {}) {
+  const ch = opts.ch || 32, gap = 8, fs = opts.fs || 14;
+  let cx = x, cy = y;
+  for (const label of chips) {
+    const tw = label.length * fs * 0.60 + 24;
+    if (cx + tw > x + w) { cx = x; cy += ch + gap; }
+    const r = figma.createRectangle();
+    r.resize(tw, ch); r.x = cx; r.y = cy; r.cornerRadius = 8;
+    r.fills = [PAINT(C.bg)]; r.strokes = [PAINT(C.line)]; r.strokeWeight = 1; f.appendChild(r);
+    mt(f, label, cx, cy + ch / 2 - 9, fs, "Semi Bold", C.text, "CENTER", tw);
+    cx += tw + gap;
+  }
+  return cy + ch;
+}
+
+// 7. FOOTER TAGLINE — hairline rule + bold lead + grey tail, sits ABOVE makeAuthor/makeWordmark.
+function taglineRule(f, x, y, w, lead, tail) {
+  const r = figma.createRectangle();
+  r.resize(w, 1); r.x = x; r.y = y; r.fills = [PAINT(C.line)]; f.appendChild(r);
+  const a = mt(f, lead, x, y + 20, 18, "Extra Bold", C.text);
+  if (tail) mt(f, tail, x + a.width + 8, y + 20, 18, "Regular", C.grey);
+  return y + 46;
+}
+```
+
+`C.card` = `{r:247/255,g:245/255,b:241/255}`, `C.coralSoft` = `{r:251/255,g:234/255,b:232/255}`, `C.line` = `{r:232/255,g:230/255,b:225/255}`, `C.grey` = `{r:108/255,g:106/255,b:100/255}` — add these to the `C` object for this template.
+
+### Assembly
+
+```js
+const frame = makeFrame("Infographic / Vertical Steps");
+figma.currentPage.appendChild(frame);
+buildChip(frame, "ПРОЦЕСИ");                       // rubric chip, centered, y=40
+buildTitle(frame, titleParts, subheading);         // CAPS centered — brand rule still wins here
+
+let y = 280;
+y = stepHead(frame, "01", "…", "…", y);
+y = tileRow(frame, M, y, CW, tiles) + 38;
+y = stepHead(frame, "02", "…", "…", y);
+y = pillRow(frame, M, y, CW, ["API","CLI","MCP","ВЕБХУК"]) + 12;
+y = noteBar(frame, M, y, CW, "…", "…") + 38;
+y = stepHead(frame, "03", "…", "…", y);
+y = coralBoxRow(frame, M, y, CW, "PLAN MODE / ГОДИНА ВГОЛОС", "ЦЕ НЕ ПРОМПТ", boxes) + 38;
+y = stepHead(frame, "04", "…", "…", y);
+y = twoColArrow(frame, M, y, CW, "ТИ ОПИСУЄШ", left, "ВОНО БУДУЄ", chips);
+
+taglineRule(frame, M, 1350 - 190, CW, "…", "…");
+makeAuthor(frame, M, 1350 - 72 - 52);
+makeWordmark(frame, 0, 1350 - 72 - 42);
+```
+
+### Real product logos in a tile row
+
+A logo row is what makes step 1 land — the reader recognises their own stack. Fetch the marks, don't draw them.
+
+```bash
+# 1. grab icons (python, not a bash for-loop — PATH gets clobbered in multi-line loops)
+#    apple-touch-icon first, Google's favicon service as fallback (128px, always PNG)
+https://<domain>/apple-touch-icon.png
+https://www.google.com/s2/favicons?domain=<domain>&sz=128
+# known exceptions: notion → https://www.notion.so/images/logo-ios.png · ahrefs → no public icon, skip it
+```
+
+Then `upload_assets` with `count = N`, POST each file to its own `submitUrl`, and use the returned `imageHash` in a `FIT`-scaled rectangle:
+
+```js
+function img(hash, x, y, size) {
+  const r = figma.createRectangle();
+  r.resize(size, size); r.x = x; r.y = y; r.cornerRadius = size * 0.22;
+  r.fills = [{ type: "IMAGE", imageHash: hash, scaleMode: "FIT" }];   // FIT, never FILL — FILL crops the mark
+  return r;
+}
+```
+
+⚠️ `upload_assets` drops a 400×300 placeholder frame per asset on the canvas. Delete them before screenshotting or they show up beside the artboard.
+
+Inline a single logo in a `noteBar` when the note is about that specific tool — it reads as evidence, not decoration.
+
+### Vertical Steps pitfalls
+
+- **Every band builder returns its bottom y.** Chain through `y` and add the gap explicitly — never hardcode section positions, or one copy edit shifts everything into the footer.
+- **Measure before you build.** Sum the band heights on paper first. Running past y≈1175 collides with the footer, and the fix is a rebuild, not a nudge.
+- **`chipWrap` width is estimated** from `label.length * fs * 0.60` — fine for Latin file names (`positioning.md`), too narrow for CAPS Cyrillic. Bump the factor to 0.72 for Cyrillic labels or the text overflows its chip.
+- **Real vendor names and logos ARE allowed in Viktor's OWN creatives** (confirmed 2026-08-03). CLAUDE.md §4's ban on third-party vendor names covers client-facing material and client repos, not his personal brand. Swapping real tools for generic categories (джерело · збагачення · перевірка) kills the creative — the reader recognising their own stack is half the hook. Client names stay banned everywhere.
+- **A backdrop rect behind a band will eat the step caption.** The band starts at the y returned by `stepHead`, and a wrapper drawn at `y - 12` reaches back into the caption's last line. Inset the wrapper ≤4 at the top, or push the whole band down.
+- **Right-aligned text nodes report the ALIGNMENT width, not the glyph width.** `mt(..., "RIGHT", 1020).width` is 1020, so positioning an icon at `x - label.width` throws it off-canvas. Measure with a throwaway LEFT-aligned probe node, read `.width`, then `.remove()` it.
+- **One coral band per creative.** The `coralBoxRow` is the punch. If two bands go coral, neither reads as the emphasis — keep the rest charcoal/card.
+- **Captions are real sentences here**, not the 2-4 word telegraph of Block Grid. Short sentences with a period. That tonal difference is most of what makes the format read as an instruction.
+
 ## Custom builds (Branching Tree, ICP/Quadrant Analysis, mixed canvas)
 
 For shapes NOT covered by the 2 templates:
@@ -913,7 +1307,8 @@ For shapes NOT covered by the 2 templates:
 - **Cross-file image hashes**: must `upload_assets` to each new file before using hashes — they look global but each file has its own registry.
 - **Comparison Table: 3+ bullets per cell** — keep them PUNCHY (3-6 words). Long bullets break the visual rhythm.
 - **Step Grid: 6/9/12 items**. Avoid 7, 8, 10, 11 (don't fit cleanly into 3-col).
-- **Coral discipline**: 1 highlight per title MAX. Coral on row markers only. Avoid coloring rows / cards / backgrounds.
+- **Coral discipline**: 1 highlight per title MAX. Coral on row markers only. Avoid coloring rows / cards / backgrounds. (Ladder is the one sanctioned exception — there the coral ramp IS the data.)
+- **HTML/Chrome backend**: never ship a PNG you haven't opened. The two Chrome flags are the difference between Inter and a serif fallback on every Cyrillic glyph, and the failure is silent.
 
 ### Chart-specific pitfalls
 
